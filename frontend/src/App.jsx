@@ -1,48 +1,63 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';
+import { TablaInventario } from './components/TablaInventario';
+import { FormularioProducto } from './components/FormularioProducto';
+import { FormularioMovimiento } from './components/FormularioMovimiento'; // Asegúrate de tener este archivo creado
 
 function App() {
-  // Aquí guardaremos los productos que lleguen de la base de datos
-  const [productos, setProductos] = useState([])
+  const [productos, setProductos] = useState([]);
+  
+  // Manejo independiente de las ventanas emergentes
+  const [mostrarFormProducto, setMostrarFormProducto] = useState(false);
+  const [mostrarFormMovimiento, setMostrarFormMovimiento] = useState(false);
 
-  // useEffect hace que esta función se ejecute automáticamente al abrir la página
-  useEffect(() => {
+  const cargarProductos = () => {
     fetch('http://localhost:3000/api/productos')
       .then(response => response.json())
-      .then(data => {
-        setProductos(data) // Guardamos los datos en el estado de React
-      })
-      .catch(error => console.error("Error de conexión:", error))
-  }, [])
+      .then(data => setProductos(data))
+      .catch(error => console.error("Error de conexión:", error));
+  };
+
+  useEffect(() => {
+    cargarProductos();
+  }, []);
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1>Inventario GMC CompuMercado</h1>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '1000px', margin: '0 auto' }}>
       
-      <table border="1" cellPadding="10" style={{ borderCollapse: 'collapse', width: '100%' }}>
-        <thead style={{ backgroundColor: '#f2f2f2' }}>
-          <tr>
-            <th>Código</th>
-            <th>Descripción</th>
-            <th>Categoría</th>
-            <th>Almacén</th>
-            <th>Stock Actual</th>
-          </tr>
-        </thead>
-        <tbody>
-          {/* Aquí recorremos el arreglo de productos para crear las filas dinámicamente */}
-          {productos.map(producto => (
-            <tr key={producto.id_producto}>
-              <td>{producto.codigo}</td>
-              <td>{producto.producto}</td>
-              <td>{producto.categoria}</td>
-              <td>{producto.almacen}</td>
-              <td>{producto.inventario}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* CABECERA */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h1 style={{ color: 'white' }}>Inventario GMC CompuMercado</h1>
+        
+        {/* GRUPO DE BOTONES (Aquí está el azul y el verde) */}
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={() => setMostrarFormMovimiento(true)} 
+            style={{ padding: '10px 20px', backgroundColor: '#0056b3', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '15px', fontWeight: 'bold' }}>
+            ↑↓ Registrar Movimiento
+          </button>
+          
+          <button 
+            onClick={() => setMostrarFormProducto(true)} 
+            style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '15px', fontWeight: 'bold' }}>
+            + Nuevo Insumo
+          </button>
+        </div>
+      </div>
+      
+      {/* RENDERIZADO CONDICIONAL DE LOS MODALES */}
+      {mostrarFormProducto && (
+        <FormularioProducto cerrarModal={() => setMostrarFormProducto(false)} onProductoGuardado={cargarProductos} />
+      )}
+
+      {mostrarFormMovimiento && (
+        <FormularioMovimiento productos={productos} cerrarModal={() => setMostrarFormMovimiento(false)} onMovimientoGuardado={cargarProductos} />
+      )}
+
+      {/* COMPONENTE DE LA TABLA */}
+      <TablaInventario productos={productos} />
+      
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

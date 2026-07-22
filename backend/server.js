@@ -62,6 +62,61 @@ app.post('/api/productos', (req, res) => {
     });
 });
 
+// Ruta para registrar un MOVIMIENTO (Entrada/Salida) y actualizar el stock mediante una Transacción
+app.post('/api/movimientos', (req, res) => {
+    const { id_producto, tipo_movimiento, cantidad, observaciones } = req.body;
+
+    // 1. Iniciamos la Transacción SQL
+    db.beginTransaction((err) => {
+        if (err) {
+            console.error('Error al iniciar la transacción:', err);
+            return res.status(500).json({ error: 'Error interno del servidor al iniciar transacción' });
+        }
+
+        // 2. Primer paso: Insertar el registro en la tabla entradas_salidas (Kardex)
+        const sqlInsertMovimiento = 'INSERT INTO entradas_salidas (id_producto, tipo_movimiento, cantidad, observaciones) VALUES (?, ?, ?, ?)';
+        
+        db.query(sqlInsertMovimiento, [id_producto, tipo_movimiento, cantidad, observaciones], (err, result) => {
+            if (err) {
+                // Si falla el insert, revertimos cualquier cambio (Rollback)
+                return db.rollback(() => {
+                    console.error('Error al insertar el movimiento:', err);
+                    res.status(500).json({ error: 'Error al registrar el movimiento en el historial' });
+                });
+            }
+
+            // 3. Segundo paso: Preparar la lógica matemática para el inventario
+            // Si es Entrada sumamos (+), si es Salida restamos (-)
+            const operador = tipo_movimiento === 'Entrada' ? '+' : '-';
+            
+            // Hacemos la operación directamente en la consulta SQL para evitar desfases de información
+            const sqlUpdateStock = `UPDATE productos SET inventario = inventario ${operador} ? WHERE id_producto = ?`;
+            
+            db.query(sqlUpdateStock, [cantidad, id_producto], (err, result) => {
+                if (err) {
+                    // Si falla la actualización del stock, revertimos el movimiento guardado arriba (Rollback)
+                    return db.rollback(() => {
+                        console.error('Error al actualizar el inventario:', err);
+                        res.status(500).json({ error: 'Error al actualizar el stock del producto' });
+                    });
+                }
+
+                // 4. Si ambos pasos fueron exitosos, confirmamos los cambios definitivamente (Commit)
+                db.commit((err) => {
+                    if (err) {
+                        return db.rollback(() => {
+                            console.error('Error en el commit de la transacción:', err);
+                            res.status(500).json({ error: 'Error al finalizar la transacción de datos' });
+                        });
+                    }
+                    
+                    // ¡Éxito total! Respondemos a React que todo salió perfecto
+                    res.json({ mensaje: 'Movimiento registrado y stock actualizado con éxito' });
+                });
+            });
+        });
+    });
+});
 // Iniciar el servidor
 app.listen(port, () => {
     console.log(`Servidor Back-end corriendo en http://localhost:${port}`);
