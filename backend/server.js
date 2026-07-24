@@ -43,6 +43,33 @@ app.get('/api/productos', (req, res) => {
     });
 });
 
+// Ruta para OBTENER el historial de movimientos (Kardex) uniendo 2 tablas
+app.get('/api/movimientos', (req, res) => {
+    // Usamos INNER JOIN para traer los datos del producto basándonos en el id_producto
+    // Ordenamos por fecha descendente (DESC) para ver los más recientes primero
+    const sql = `
+        SELECT 
+            m.id_movimiento,
+            m.fecha_movimiento,
+            p.codigo,
+            p.producto AS descripcion,
+            m.tipo_movimiento,
+            m.cantidad,
+            m.observaciones
+        FROM entradas_salidas m
+        INNER JOIN productos p ON m.id_producto = p.id_producto
+        ORDER BY m.fecha_movimiento DESC
+    `;
+
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('Error al consultar el historial de movimientos:', err);
+            return res.status(500).json({ error: 'Error al obtener el historial' });
+        }
+        res.json(results);
+    });
+});
+
 // Ruta para AGREGAR un nuevo producto al inventario
 app.post('/api/productos', (req, res) => {
     // 1. Extraemos los datos que nos enviará React
@@ -59,6 +86,38 @@ app.post('/api/productos', (req, res) => {
         }
         // Si todo sale bien, respondemos con éxito
         res.json({ mensaje: 'Producto registrado con éxito', id_insertado: result.insertId });
+    });
+});
+// Ruta para ACTUALIZAR (Editar) los datos de un producto existente
+app.put('/api/productos/:id', (req, res) => {
+    // 1. Extraemos el ID que viene en la URL (ej. /api/productos/5)
+    const { id } = req.params;
+    
+    // 2. Extraemos los nuevos datos que nos enviará el formulario de React
+    const { codigo, producto, presentacion, categoria, almacen, stock_minimo } = req.body;
+
+    // 3. Preparamos la consulta SQL
+    // ¡IMPORTANTE!: No incluimos el campo 'inventario' aquí. Así garantizamos que sea intocable.
+    const sql = `
+        UPDATE productos 
+        SET codigo = ?, producto = ?, presentacion = ?, categoria = ?, almacen = ?, stock_minimo = ? 
+        WHERE id_producto = ?
+    `;
+
+    // 4. Ejecutamos la consulta
+    db.query(sql, [codigo, producto, presentacion, categoria, almacen, stock_minimo, id], (err, result) => {
+        if (err) {
+            console.error('Error al actualizar el producto:', err);
+            return res.status(500).json({ error: 'Error al actualizar el producto en la base de datos' });
+        }
+        
+        // Verificamos si el producto realmente existía
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Producto no encontrado' });
+        }
+
+        // Si todo sale bien, respondemos con éxito
+        res.json({ mensaje: 'Producto actualizado correctamente' });
     });
 });
 

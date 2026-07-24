@@ -1,17 +1,15 @@
-// src/components/FormularioProducto.jsx
+// src/components/FormularioEdicion.jsx
 import { useState } from 'react';
-import { PRESENTACIONES, CATEGORIAS, ALMACENES } from '../utils/catalogos'; // Importamos las listas
+import { PRESENTACIONES, CATEGORIAS, ALMACENES } from '../utils/catalogos'; // Misma importación
 
-export function FormularioProducto({ cerrarModal, onProductoGuardado }) {
+export function FormularioEdicion({ producto, cerrarModal, onProductoEditado }) {
   const [formulario, setFormulario] = useState({
-    codigo: '',
-    producto: '',
-    presentacion: PRESENTACIONES[0], // Por defecto toma el primero ("Caja")
-    categoria: CATEGORIAS[0],        // Por defecto "Toner"
-    almacen: ALMACENES[0],           // Por defecto "Almacén 1"
-    stock_minimo: 1,
-    inventario: 0, 
-    solicitar: 0
+    codigo: producto.codigo,
+    producto: producto.producto,
+    presentacion: producto.presentacion,
+    categoria: producto.categoria,
+    almacen: producto.almacen,
+    stock_minimo: producto.stock_minimo
   });
 
   const handleChange = (e) => {
@@ -22,18 +20,18 @@ export function FormularioProducto({ cerrarModal, onProductoGuardado }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    fetch('http://localhost:3000/api/productos', {
-      method: 'POST',
+    fetch(`http://localhost:3000/api/productos/${producto.id_producto}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formulario)
     })
     .then(response => response.json())
     .then(() => {
-      alert("¡Producto creado! Recuerda registrar su entrada para agregar stock.");
-      onProductoGuardado(); 
+      alert("¡Producto actualizado correctamente!");
+      onProductoEditado();
       cerrarModal(); 
     })
-    .catch(error => console.error("Error al guardar:", error));
+    .catch(error => console.error("Error al actualizar:", error));
   };
 
   return (
@@ -42,9 +40,9 @@ export function FormularioProducto({ cerrarModal, onProductoGuardado }) {
         
         <button onClick={cerrarModal} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✖</button>
 
-        <h3 style={{ marginTop: 0 }}>Ficha de Nuevo Insumo</h3>
+        <h3 style={{ marginTop: 0, color: '#ff9800' }}>✏️ Editar Insumo</h3>
         <p style={{ fontSize: '13px', color: '#666', marginTop: '-10px', marginBottom: '20px' }}>
-          *El stock inicial será 0. Registre una entrada en el panel principal.
+          *El stock no puede ser modificado desde esta pantalla.
         </p>
         
         <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -54,37 +52,30 @@ export function FormularioProducto({ cerrarModal, onProductoGuardado }) {
           <div>
             <label>Presentación:</label><br/>
             <select name="presentacion" value={formulario.presentacion} onChange={handleChange} style={{width: '95%', padding: '6px'}}>
-              {/* Aquí mapeamos (recorremos) la lista de presentaciones */}
-              {PRESENTACIONES.map(opcion => (
-                <option key={opcion} value={opcion}>{opcion}</option>
-              ))}
+              {PRESENTACIONES.map(opcion => <option key={opcion} value={opcion}>{opcion}</option>)}
             </select>
           </div>
           <div>
             <label>Categoría:</label><br/>
             <select name="categoria" value={formulario.categoria} onChange={handleChange} style={{width: '95%', padding: '6px'}}>
-              {CATEGORIAS.map(opcion => (
-                <option key={opcion} value={opcion}>{opcion}</option>
-              ))}
+              {CATEGORIAS.map(opcion => <option key={opcion} value={opcion}>{opcion}</option>)}
             </select>
           </div>
           
           <div>
             <label>Almacén:</label><br/>
             <select name="almacen" value={formulario.almacen} onChange={handleChange} style={{width: '95%', padding: '6px'}}>
-              {ALMACENES.map(opcion => (
-                <option key={opcion} value={opcion}>{opcion}</option>
-              ))}
+              {ALMACENES.map(opcion => <option key={opcion} value={opcion}>{opcion}</option>)}
             </select>
           </div>
           <div>
-            <label>Stock Mínimo (Alerta):</label><br/>
+            <label>Stock Mínimo:</label><br/>
             <input type="number" name="stock_minimo" value={formulario.stock_minimo} onChange={handleChange} min="1" required style={{width: '90%', padding: '6px'}} />
           </div>
 
           <div style={{ gridColumn: 'span 2', textAlign: 'right', marginTop: '20px' }}>
             <button type="button" onClick={cerrarModal} style={{ padding: '10px 15px', backgroundColor: '#ccc', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>Cancelar</button>
-            <button type="submit" style={{ padding: '10px 20px', backgroundColor: '#0056b3', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar Ficha</button>
+            <button type="submit" style={{ padding: '10px 20px', backgroundColor: '#ff9800', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar Cambios</button>
           </div>
         </form>
       </div>
